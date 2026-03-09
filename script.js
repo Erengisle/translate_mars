@@ -1,144 +1,117 @@
-const languages = {
+const ALWAYS_LANGUAGES = ["ukrainian", "spanish"];
+const OPTIONAL_LANGUAGES = [
+  "english", "arabic", "urdu", "bangla", "turkish",
+  "tigrinya", "thai", "russian", "mandarin", "mongolian",
+  "dari", "persian"
+];
 
-Ukrainian:"uk",
-Spanish_Latin_America:"es",
+const LANGUAGE_META = {
+  spanish: { sv: "Spanska", flag: "🇪🇸" },
+  ukrainian: { sv: "Ukrainska", flag: "🇺🇦" },
+  english: { sv: "Engelska", flag: "🇬🇧" },
+  arabic: { sv: "Arabiska", flag: "🇸🇦" },
+  urdu: { sv: "Urdu", flag: "🇵🇰" },
+  bangla: { sv: "Bangla", flag: "🇧🇩" },
+  turkish: { sv: "Turkiska", flag: "🇹🇷" },
+  tigrinya: { sv: "Tigrinja", flag: "🇪🇷" },
+  thai: { sv: "Thailändska", flag: "🇹🇭" },
+  russian: { sv: "Ryska", flag: "🇷🇺" },
+  mandarin: { sv: "Kinesiska (Mandarin)", flag: "🇨🇳" },
+  mongolian: { sv: "Mongoliska", flag: "🇲🇳" },
+  dari: { sv: "Dari", flag: "🇦🇫" },
+  persian: { sv: "Persiska", flag: "🇮🇷" }
+};
 
-English:"en",
-Arabic:"ar",
-Urdu:"ur",
-Bangla:"bn",
-Turkish:"tr",
-Tigrinya:"ti",
-Thai:"th",
-Russian:"ru",
-Chinese_Mandarin:"zh",
-Mongolian:"mn",
-Dari:"fa-AF",
-Persian:"fa"
+// Skapa kryssrutor
+const container = document.getElementById("languageContainer");
+OPTIONAL_LANGUAGES.forEach(lang => {
+  const label = document.createElement("label");
+  label.className = "lang-checkbox";
 
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.id = `lang-${lang}`;
+  checkbox.value = lang;
+
+  label.appendChild(checkbox);
+  label.innerHTML += `<span>${LANGUAGE_META[lang].flag}</span>${LANGUAGE_META[lang].sv}`;
+  container.appendChild(label);
+});
+
+document.getElementById("translateBtn").addEventListener("click", translate);
+
+async function translate() {
+  const text = document.getElementById("sourceText").value.trim();
+  if (!text) {
+    alert("Skriv in text att översätta.");
+    return;
+  }
+
+  const selected = [...ALWAYS_LANGUAGES];
+  OPTIONAL_LANGUAGES.forEach(lang => {
+    const cb = document.getElementById(`lang-${lang}`);
+    if (cb.checked) selected.push(lang);
+  });
+
+  document.getElementById("results").innerHTML = "";
+  document.getElementById("loading").style.display = "block";
+  document.getElementById("translateBtn").disabled = true;
+
+  const translations = {};
+
+  try {
+    for (const lang of selected) {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": "YOUR_API_KEY",  // <--- Lägg in din Claude-API-nyckel
+          "anthropic-version": "2023-06-01"
+        },
+        body: JSON.stringify({
+          model: "claude-3-5-sonnet-20241022",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: `Translate the following Swedish text for school communication into ${LANGUAGE_META[lang].sv}. Use natural everyday language. Return only the translation.\n\nTEXT:\n${text}`
+          }]
+        })
+      });
+
+      if (!response.ok) throw new Error(`Fel vid översättning till ${LANGUAGE_META[lang].sv}`);
+      const data = await response.json();
+      translations[lang] = data.content[0].text.trim();
+    }
+
+    showTranslations(translations);
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("translateBtn").disabled = false;
+  }
 }
 
-async function translate(){
+function showTranslations(translations) {
+  const results = document.getElementById("results");
+  results.innerHTML = "";
+  Object.entries(translations).forEach(([lang, text]) => {
+    const card = document.createElement("div");
+    card.className = "card";
 
-const text = document.getElementById("sourceText").value.trim()
+    card.innerHTML = `
+      <div class="card-header">
+        <span>${LANGUAGE_META[lang].flag}</span>${LANGUAGE_META[lang].sv}
+      </div>
+      <div class="card-text">${text}</div>
+    `;
 
-if(!text){
-alert("Please enter text")
-return
-}
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "copy-btn";
+    copyBtn.innerText = "Kopiera";
+    copyBtn.onclick = () => navigator.clipboard.writeText(text);
 
-const prompt =
-"Translate the following Swedish text for school communication into these languages: " +
-Object.keys(languages).join(", ") +
-". Use natural everyday language suitable for school communication. Return ONLY JSON exactly like {language:text}."
-
-try{
-
-const response = await fetch("https://api.anthropic.com/v1/messages",{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json",
-"x-api-key":"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",
-"anthropic-version":"2023-06-01"
-},
-
-body:JSON.stringify({
-
-model:"claude-3-5-sonnet-20241022",
-
-max_tokens:1200,
-
-messages:[{
-role:"user",
-content:prompt + "\n\nTEXT:\n" + text
-}]
-
-})
-
-})
-
-const data = await response.json()
-
-const raw = data.content[0].text
-
-const jsonStart = raw.indexOf("{")
-const jsonEnd = raw.lastIndexOf("}") + 1
-
-const translations = JSON.parse(raw.slice(jsonStart,jsonEnd))
-
-showTranslations(translations)
-
-}catch(err){
-
-console.error(err)
-alert("Translation failed")
-
-}
-
-}
-
-function showTranslations(translations){
-
-const container = document.getElementById("results")
-
-container.innerHTML=""
-
-for(const lang in translations){
-
-const text = translations[lang]
-
-const card = document.createElement("div")
-card.className="card"
-
-const title = document.createElement("h3")
-title.innerText = lang
-
-const t = document.createElement("div")
-t.className="translation"
-t.innerText = text
-
-const copy = document.createElement("button")
-copy.innerText="Copy"
-copy.onclick=()=>navigator.clipboard.writeText(text)
-
-const qr = document.createElement("div")
-qr.className="qr"
-
-card.appendChild(title)
-card.appendChild(t)
-card.appendChild(copy)
-card.appendChild(qr)
-
-container.appendChild(card)
-
-createQR(text,lang,qr)
-
-}
-
-}
-
-function createQR(text,lang,element){
-
-const url =
-window.location.origin +
-window.location.pathname.replace("index.html","") +
-"view.html?lang="+
-encodeURIComponent(lang)+
-"&text="+
-encodeURIComponent(text)
-
-new QRCode(element,{
-text:url,
-width:180,
-height:180
-})
-
-}
-
-function printQR(){
-
-window.print()
-
+    card.appendChild(copyBtn);
+    results.appendChild(card);
+  });
 }
