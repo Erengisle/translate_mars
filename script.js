@@ -40,7 +40,7 @@ method:"POST",
 
 headers:{
 "Content-Type":"application/json",
-"x-api-key":"YOUR_API_KEY",
+"x-api-key":"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",
 "anthropic-version":"2023-06-01"
 },
 
