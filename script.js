@@ -60,7 +60,7 @@ title.innerText=lang
 const qr=document.createElement("div")
 
 new QRCode(qr,{
-text:`view.html?id=${id}`,
+text:`https://erengisle.github.io/translate_mars/view.html?id=${id}`
 width:150,
 height:150
 })
