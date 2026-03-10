@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+
+<title>QR-ark</title>
+
+<style>
+
+body{
+
+font-family:Arial;
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:20px;
+padding:20px;
+
+}
+
+.card{
+
+border:1px solid #000;
+padding:10px;
+text-align:center;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<script>
+
+document.body.innerHTML=localStorage.getItem("qrprint")
+
+window.print()
+
+</script>
+
+</body>
+</html>
