@@ -2,7 +2,7 @@ const endpoint="https://nyqxplfhrzydxnwhvhco.supabase.co/functions/v1/translate"
 
 const supabase="https://nyqxplfhrzydxnwhvhco.supabase.co"
 
-const anon="DIN_SUPABASE_ANON_KEY"
+const anon="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55cXhwbGZocnp5ZHhud2h2aGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwODI5MTgsImV4cCI6MjA4ODY1ODkxOH0.zaWJIBgJahhU4KphbalcKc_RVL6kq1irTs6C074bgW0"
 
 const defaultLanguages={
 "Ukrainska":"Ukrainian",
