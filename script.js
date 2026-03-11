@@ -1,81 +1,86 @@
 const endpoint="https://nyqxplfhrzydxnwhvhco.supabase.co/functions/v1/translate"
 
+const supabase="https://nyqxplfhrzydxnwhvhco.supabase.co"
+
+const anon="DIN_ANON_KEY_HÄR"
+
+
 const languages={
-
-spanish:{sv:"Spanska",flag:"🇪🇸"},
-ukrainian:{sv:"Ukrainska",flag:"🇺🇦"},
-urdu:{sv:"Urdu",flag:"🇵🇰"},
-english:{sv:"Engelska",flag:"🇬🇧"},
-greek:{sv:"Grekiska",flag:"🇬🇷"},
-turkish:{sv:"Turkiska",flag:"🇹🇷"},
-tigrinya:{sv:"Tigrinja",flag:"🇪🇷"},
-swahili:{sv:"Swahili",flag:"🇰🇪"},
-bangla:{sv:"Bangla",flag:"🇧🇩"},
-arabic:{sv:"Arabiska",flag:"🇸🇦"},
-russian:{sv:"Ryska",flag:"🇷🇺"},
-mandarin:{sv:"Mandarin",flag:"🇨🇳"},
-thai:{sv:"Thailändska",flag:"🇹🇭"},
-mongolian:{sv:"Mongoliska",flag:"🇲🇳"},
-dari:{sv:"Dari",flag:"🇦🇫"},
-persian:{sv:"Persiska",flag:"🇮🇷"}
-
+spanish:"Spanska",
+ukrainian:"Ukrainska",
+english:"Engelska",
+arabic:"Arabiska",
+somali:"Somaliska",
+persian:"Persiska",
+turkish:"Turkiska",
+thai:"Thailändska",
+russian:"Ryska",
+french:"Franska",
+german:"Tyska",
+italian:"Italienska",
+polish:"Polska",
+tigrinya:"Tigrinja"
 }
 
-let selected={}
+
+let selected={
+spanish:true,
+ukrainian:true
+}
+
 
 createLanguageGrid()
+loadFavorites()
+
 
 function createLanguageGrid(){
 
-const grid=document.getElementById("languages")
+const container=document.getElementById("languages")
 
-Object.entries(languages).forEach(([key,lang])=>{
+for(const key in languages){
 
 const div=document.createElement("div")
-div.className="language"
+div.className="langbox"
 
-div.innerHTML=`<input type="checkbox" id="${key}">
-<span>${lang.flag}</span>
-<span>${lang.sv}</span>`
+div.innerHTML=
+`<label>
+<input type="checkbox" ${selected[key]?"checked":""} value="${key}">
+${languages[key]}
+</label>`
 
-div.onclick=()=>{
+div.onclick=(e)=>{
 
 const cb=div.querySelector("input")
+
+if(e.target.tagName!=="INPUT"){
 cb.checked=!cb.checked
+}
+
 selected[key]=cb.checked
 
 }
 
-grid.appendChild(div)
-
-})
+container.appendChild(div)
 
 }
+
+}
+
 
 async function translate(){
 
-const text=document.getElementById("text").value.trim()
+const text=document.getElementById("text").value
 
-if(!text){
-
-alert("Skriv text")
-
-return
-
-}
-
-const langs=["spanish","ukrainian"]
-
-Object.entries(selected).forEach(([k,v])=>{
-if(v)langs.push(k)
-})
+if(!text)return alert("Skriv text")
 
 const results=document.getElementById("results")
-results.innerHTML="Översätter..."
+results.innerHTML=""
 
-try{
+const langs=Object.entries(selected)
+.filter(([k,v])=>v)
+.map(([k,v])=>k)
 
-const promises=langs.map(async lang=>{
+for(const lang of langs){
 
 const res=await fetch(endpoint,{
 method:"POST",
@@ -86,50 +91,131 @@ language:lang
 })
 })
 
-return await res.json()
+const data=await res.json()
 
-})
+createCard(languages[lang],data.translation,data.id)
 
-const translations=await Promise.all(promises)
+}
 
-results.innerHTML=""
+}
 
-translations.forEach((data,i)=>{
 
-const langKey=langs[i]
-const lang=languages[langKey]
+
+function createCard(lang,translation,id){
+
+const container=document.getElementById("results")
 
 const card=document.createElement("div")
-card.className="resultCard"
+card.className="card"
 
-const header=document.createElement("div")
-header.className="resultHeader"
-header.innerText=`${lang.flag} ${lang.sv}`
-
-const translation=document.createElement("div")
-translation.className="translation"
-translation.innerText=data.translation
+const title=document.createElement("div")
+title.className="lang"
+title.innerText=lang
 
 const qr=document.createElement("div")
 
 new QRCode(qr,{
-text:`https://erengisle.github.io/translate_mars/view.html?id=${data.id}`,
-width:120,
-height:120
+text:`view.html?id=${id}`,
+width:140,
+height:140
 })
 
-card.appendChild(header)
-card.appendChild(qr)
-card.appendChild(translation)
+const text=document.createElement("div")
+text.className="translation"
+text.innerText=translation
 
-results.appendChild(card)
 
-})
+const copy=document.createElement("button")
+copy.className="copy"
+copy.innerText="Kopiera"
+copy.onclick=()=>{
 
-}catch(e){
+navigator.clipboard.writeText(translation)
 
-results.innerHTML="Fel vid översättning"
+copy.innerText="Kopierad!"
+
+setTimeout(()=>copy.innerText="Kopiera",1500)
 
 }
+
+
+card.appendChild(title)
+card.appendChild(qr)
+card.appendChild(text)
+card.appendChild(copy)
+
+container.appendChild(card)
+
+}
+
+
+
+async function saveFavorite(){
+
+const text=document.getElementById("text").value
+
+await fetch(`${supabase}/rest/v1/favorites`,{
+method:"POST",
+headers:{
+apikey:anon,
+Authorization:`Bearer ${anon}`,
+"Content-Type":"application/json"
+},
+body:JSON.stringify({text:text})
+})
+
+loadFavorites()
+
+}
+
+
+
+async function loadFavorites(){
+
+const res=await fetch(`${supabase}/rest/v1/favorites?select=*`,{
+headers:{
+apikey:anon,
+Authorization:`Bearer ${anon}`
+}
+})
+
+const data=await res.json()
+
+const select=document.getElementById("favorites")
+
+select.innerHTML="<option>Favoriter</option>"
+
+data.forEach(f=>{
+
+const option=document.createElement("option")
+
+option.value=f.text
+option.innerText=f.text
+
+select.appendChild(option)
+
+})
+
+select.onchange=e=>{
+document.getElementById("text").value=e.target.value
+}
+
+}
+
+
+
+function printQR(){
+
+const cards=[...document.querySelectorAll(".card")]
+
+let html=""
+
+cards.forEach(c=>{
+html+=c.outerHTML
+})
+
+localStorage.setItem("qrprint",html)
+
+window.open("print.html")
 
 }
