@@ -1,8 +1,9 @@
-const endpoint="https://nyqxplfhrzydxnwhvhco.supabase.co/functions/v1/translate"
+const endpoint="DIN_EDGE_FUNCTION_URL"
 
-const supabase="https://nyqxplfhrzydxnwhvhco.supabase.co"
+const supabase="DIN_SUPABASE_URL"
 
-const anon="DIN_ANON_KEY_HÄR"
+const anon="DIN_ANON_KEY"
+
 
 
 const languages={
@@ -23,14 +24,27 @@ tigrinya:"Tigrinja"
 }
 
 
+
 let selected={
 spanish:true,
 ukrainian:true
 }
 
 
+
 createLanguageGrid()
 loadFavorites()
+
+
+
+function quick(text){
+
+document.getElementById("text").value=text
+
+translate()
+
+}
+
 
 
 function createLanguageGrid(){
@@ -44,7 +58,7 @@ div.className="langbox"
 
 div.innerHTML=
 `<label>
-<input type="checkbox" ${selected[key]?"checked":""} value="${key}">
+<input type="checkbox" ${selected[key]?"checked":""}>
 ${languages[key]}
 </label>`
 
@@ -67,11 +81,12 @@ container.appendChild(div)
 }
 
 
+
 async function translate(){
 
 const text=document.getElementById("text").value
 
-if(!text)return alert("Skriv text")
+if(!text)return
 
 const results=document.getElementById("results")
 results.innerHTML=""
@@ -79,6 +94,8 @@ results.innerHTML=""
 const langs=Object.entries(selected)
 .filter(([k,v])=>v)
 .map(([k,v])=>k)
+
+
 
 for(const lang of langs){
 
@@ -96,6 +113,20 @@ const data=await res.json()
 createCard(languages[lang],data.translation,data.id)
 
 }
+
+}
+
+
+
+function translateAll(){
+
+for(const key in languages){
+
+selected[key]=true
+
+}
+
+translate()
 
 }
 
@@ -125,24 +156,45 @@ text.className="translation"
 text.innerText=translation
 
 
+
+const tools=document.createElement("div")
+tools.className="tools"
+
+
+
 const copy=document.createElement("button")
-copy.className="copy"
 copy.innerText="Kopiera"
+
 copy.onclick=()=>{
 
 navigator.clipboard.writeText(translation)
 
-copy.innerText="Kopierad!"
+}
 
-setTimeout(()=>copy.innerText="Kopiera",1500)
+
+
+const speak=document.createElement("button")
+speak.innerText="🔊"
+
+speak.onclick=()=>{
+
+const u=new SpeechSynthesisUtterance(translation)
+
+speechSynthesis.speak(u)
 
 }
+
+
+
+tools.appendChild(copy)
+tools.appendChild(speak)
+
 
 
 card.appendChild(title)
 card.appendChild(qr)
 card.appendChild(text)
-card.appendChild(copy)
+card.appendChild(tools)
 
 container.appendChild(card)
 
