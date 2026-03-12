@@ -44,15 +44,13 @@ function init() {
   createLanguageGrid()
   loadFavorites()
 
-  // Explicit globals for inline onclick handlers in index.html
+  // Globals for inline onclick in index.html
   window.quick = quick
   window.runTranslate = runTranslate
-  window.translate = translate // backward compatibility for cached HTML
+  window.translate = translate // backward compatibility
   window.translateAll = translateAll
   window.saveFavorite = saveFavorite
-  
 }
-
 
 function translate() {
   return runTranslate()
@@ -65,6 +63,7 @@ function quick(text) {
 
 function createLanguageGrid() {
   const container = document.getElementById("languages")
+  container.innerHTML = ""
 
   for (const key in optionalLanguages) {
     const div = document.createElement("div")
@@ -75,15 +74,17 @@ function createLanguageGrid() {
 ${optionalLanguages[key]}
 </label>`
 
-    div.onclick = (e) => {
-      const cb = div.querySelector("input")
+    const cb = div.querySelector("input")
 
-      if (e.target.tagName !== "INPUT") {
-        cb.checked = !cb.checked
-      }
-
+    cb.addEventListener("change", () => {
       selected[key] = cb.checked
-    }
+    })
+
+    div.addEventListener("click", (e) => {
+      if (e.target.tagName === "INPUT") return
+      cb.checked = !cb.checked
+      cb.dispatchEvent(new Event("change"))
+    })
 
     container.appendChild(div)
   }
@@ -91,7 +92,6 @@ ${optionalLanguages[key]}
 
 async function runTranslate() {
   const text = document.getElementById("text").value.trim()
-
   if (!text) return
 
   const results = document.getElementById("results")
@@ -113,25 +113,21 @@ async function runTranslate() {
           apikey: anon,
           Authorization: `Bearer ${anon}`
         },
-        body: JSON.stringify({
-          text,
-          language: lang
-        })
+        body: JSON.stringify({ text, language: lang })
       })
 
       if (!res.ok) {
         const errorText = await res.text()
-        createCard(allLanguages[lang], `Fel vid översättning (${res.status}): ${errorText}`, "")
+        createCard(allLanguages[lang], `Fel vid översättning (${res.status}): ${errorText}`)
         continue
       }
 
       const data = await res.json()
-      createCard(allLanguages[lang], data.translation, data.id)
+      createCard(allLanguages[lang], data.translation)
     } catch (error) {
       createCard(
         allLanguages[lang],
-        `Nätverksfel vid översättning: ${error?.message || "okänt fel"}`,
-        ""
+        `Nätverksfel vid översättning: ${error?.message || "okänt fel"}`
       )
     }
   }
@@ -141,11 +137,11 @@ function translateAll() {
   for (const key in optionalLanguages) {
     selected[key] = true
   }
-
+  createLanguageGrid()
   runTranslate()
 }
 
-function createCard(lang, translation, id) {
+function createCard(lang, translation) {
   const container = document.getElementById("results")
 
   const card = document.createElement("div")
@@ -154,11 +150,6 @@ function createCard(lang, translation, id) {
   const title = document.createElement("div")
   title.className = "lang"
   title.innerText = lang
-
-  const qr = document.createElement("div")
-
-   })
-  }
 
   const text = document.createElement("div")
   text.className = "translation"
@@ -169,14 +160,12 @@ function createCard(lang, translation, id) {
 
   const copy = document.createElement("button")
   copy.innerText = "Kopiera"
+  copy.onclick = () => navigator.clipboard.writeText(translation)
 
-  copy.onclick = () => {
-    navigator.clipboard.writeText(translation)
-  }
   tools.appendChild(copy)
 
   card.appendChild(title)
-   card.appendChild(text)
+  card.appendChild(text)
   card.appendChild(tools)
 
   container.appendChild(card)
@@ -217,33 +206,16 @@ async function loadFavorites() {
   }
 
   const select = document.getElementById("favorites")
-
   select.innerHTML = "<option>Favoriter</option>"
 
   data.forEach((f) => {
     const option = document.createElement("option")
-
     option.value = f.text
     option.innerText = f.text
-
     select.appendChild(option)
   })
 
   select.onchange = (e) => {
     document.getElementById("text").value = e.target.value
   }
-}
-
-function printQR() {
-  const cards = [...document.querySelectorAll(".card")]
-
-  let html = ""
-
-  cards.forEach((c) => {
-    html += c.outerHTML
-  })
-
-  localStorage.setItem("qrprint", html)
-
-  window.open("print.html")
 }
