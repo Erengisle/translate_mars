@@ -15,7 +15,7 @@ const optionalLanguages = {
   english: "Engelska",
   turkish: "Turkiska",
   dari: "Dari",
-  mongolian: "Mongoliska"
+  mongolian: "Mongoliska",
   persian: "Persiska",
   thai: "Thailändska",
   russian: "Ryska"
