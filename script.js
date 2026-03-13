@@ -4,6 +4,12 @@ const supabase = "https://nyqxplfhrzydxnwhvhco.supabase.co"
 
 const anon = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55cXhwbGZocnp5ZHhud2h2aGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwODI5MTgsImV4cCI6MjA4ODY1ODkxOH0.zaWJIBgJahhU4KphbalcKc_RVL6kq1irTs6C074bgW0"
 
+// Bas-URL för view.html — fungerar både lokalt och på GitHub Pages
+const viewBase = (() => {
+  const p = location.pathname.replace(/\/[^/]*$/, "/")
+  return location.origin + p + "view.html"
+})()
+
 const alwaysIncludedLanguages = {
   spanish: "Spanska",
   ukrainian: "Ukrainska"
@@ -44,10 +50,9 @@ function init() {
   createLanguageGrid()
   loadFavorites()
 
-  // Globals for inline onclick in index.html
   window.quick = quick
   window.runTranslate = runTranslate
-  window.translate = translate // backward compatibility
+  window.translate = translate
   window.translateAll = translateAll
   window.saveFavorite = saveFavorite
 }
@@ -118,16 +123,17 @@ async function runTranslate() {
 
       if (!res.ok) {
         const errorText = await res.text()
-        createCard(allLanguages[lang], `Fel vid översättning (${res.status}): ${errorText}`)
+        createCard(allLanguages[lang], `Fel vid översättning (${res.status}): ${errorText}`, text)
         continue
       }
 
       const data = await res.json()
-      createCard(allLanguages[lang], data.translation)
+      createCard(allLanguages[lang], data.translation, text)
     } catch (error) {
       createCard(
         allLanguages[lang],
-        `Nätverksfel vid översättning: ${error?.message || "okänt fel"}`
+        `Nätverksfel vid översättning: ${error?.message || "okänt fel"}`,
+        text
       )
     }
   }
@@ -141,32 +147,69 @@ function translateAll() {
   runTranslate()
 }
 
-function createCard(lang, translation) {
+function createCard(lang, translation, originalText) {
   const container = document.getElementById("results")
 
   const card = document.createElement("div")
   card.className = "card"
 
+  // --- Topprad: språknamn + kopiera-knapp ---
+  const topRow = document.createElement("div")
+  topRow.className = "card-top"
+
   const title = document.createElement("div")
   title.className = "lang"
   title.innerText = lang
 
+  const copy = document.createElement("button")
+  copy.className = "btn-copy"
+  copy.innerText = "Kopiera"
+  copy.onclick = () => {
+    navigator.clipboard.writeText(translation)
+    copy.innerText = "✓ Kopierat"
+    setTimeout(() => (copy.innerText = "Kopiera"), 1800)
+  }
+
+  topRow.appendChild(title)
+  topRow.appendChild(copy)
+
+  // --- Översättningstext ---
   const text = document.createElement("div")
   text.className = "translation"
   text.innerText = translation
 
-  const tools = document.createElement("div")
-  tools.className = "tools"
+  // --- QR-kod ---
+  const qrWrap = document.createElement("div")
+  qrWrap.className = "qr-wrap"
 
-  const copy = document.createElement("button")
-  copy.innerText = "Kopiera"
-  copy.onclick = () => navigator.clipboard.writeText(translation)
+  const qrLabel = document.createElement("p")
+  qrLabel.className = "qr-label"
+  qrLabel.innerText = "Skanna för att spara"
 
-  tools.appendChild(copy)
+  const qrDiv = document.createElement("div")
+  qrDiv.className = "qr-code"
 
-  card.appendChild(title)
+  // Bygg URL med original + översättning inkodade
+  const viewUrl = `${viewBase}?lang=${encodeURIComponent(lang)}&orig=${encodeURIComponent(btoa(unescape(encodeURIComponent(originalText || ""))))}&trans=${encodeURIComponent(btoa(unescape(encodeURIComponent(translation))))}`
+
+  // Generera QR-kod (biblioteket läggs till i index.html)
+  if (typeof QRCode !== "undefined") {
+    new QRCode(qrDiv, {
+      text: viewUrl,
+      width: 100,
+      height: 100,
+      colorDark: "#1a1a2e",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    })
+  }
+
+  qrWrap.appendChild(qrLabel)
+  qrWrap.appendChild(qrDiv)
+
+  card.appendChild(topRow)
   card.appendChild(text)
-  card.appendChild(tools)
+  card.appendChild(qrWrap)
 
   container.appendChild(card)
 }
@@ -205,8 +248,8 @@ async function loadFavorites() {
     data = []
   }
 
-  const select = document.getElementById("favorites")
-  select.innerHTML = "<option>Favoriter</option>"
+  const select = document.getElementById("favoriter")
+  select.innerHTML = "<option>⭐ Favoriter</option>"
 
   data.forEach((f) => {
     const option = document.createElement("option")
